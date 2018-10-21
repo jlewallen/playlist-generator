@@ -34,11 +34,14 @@ type PlaylistSet struct {
 }
 
 func (ps *PlaylistSet) Monthly() (nps *PlaylistSet) {
-	monthly := regexp.MustCompile("^(\\d\\d\\d\\d) (january|february|march|april|may|june|july|august|september|october|november|december)$")
+	filter := regexp.MustCompile("[^A-Za-z0-9\\s]")
+	monthly := regexp.MustCompile("(?i)^((\\d\\d\\d\\d )?(january|february|march|april|may|june|july|august|september|october|november|december)( \\d\\d\\d\\d)?)$")
 
 	playlists := make([]Playlist, 0)
 	for _, pl := range ps.Playlists {
-		if monthly.MatchString(pl.Name) {
+		filtered := filter.ReplaceAllString(pl.Name, "")
+
+		if monthly.MatchString(filtered) {
 			playlists = append(playlists, pl)
 		}
 	}
@@ -84,8 +87,9 @@ func GetPlaylistByTitle(spotifyClient *spotify.Client, user, name string) (*spot
 }
 
 func (sc *SpotifyCacher) GetPlaylists(user string) (playlists *PlaylistSet, err error) {
-	if _, err := os.Stat("playlists.json"); !os.IsNotExist(err) {
-		file, err := ioutil.ReadFile("playlists.json")
+	cachedFile := fmt.Sprintf("playlists-%s.json", user)
+	if _, err := os.Stat(cachedFile); !os.IsNotExist(err) {
+		file, err := ioutil.ReadFile(cachedFile)
 		if err != nil {
 			return nil, err
 		}
@@ -96,7 +100,7 @@ func (sc *SpotifyCacher) GetPlaylists(user string) (playlists *PlaylistSet, err 
 			return nil, err
 		}
 
-		log.Printf("Returning cached playlists.json")
+		log.Printf("Returning cached %v", cachedFile)
 
 		return playlists, nil
 	}
@@ -131,12 +135,12 @@ func (sc *SpotifyCacher) GetPlaylists(user string) (playlists *PlaylistSet, err 
 
 	json, err := json.Marshal(playlists)
 	if err != nil {
-		return nil, fmt.Errorf("Error saving Playlists.json: %v", err)
+		return nil, fmt.Errorf("Error saving Playlists: %v", err)
 	}
 
-	err = ioutil.WriteFile("playlists.json", json, 0644)
+	err = ioutil.WriteFile(cachedFile, json, 0644)
 	if err != nil {
-		return nil, fmt.Errorf("Error saving Playlists.json: %v", err)
+		return nil, fmt.Errorf("Error saving Playlists: %v", err)
 	}
 
 	return
@@ -284,6 +288,8 @@ func getPlaylist(spotifyClient *spotify.Client, user string, name string) (pl *s
 }
 
 type Options struct {
+	Dry  bool
+	Self string
 	User string
 	Name string
 	Size int
@@ -292,11 +298,15 @@ type Options struct {
 func main() {
 	var options Options
 
+	flag.BoolVar(&options.Dry, "dry", false, "dry")
+	flag.StringVar(&options.Self, "self", "jlewalle", "self")
 	flag.StringVar(&options.User, "user", "jlewalle", "user")
 	flag.StringVar(&options.Name, "name", "discovery monthly", "name")
 	flag.IntVar(&options.Size, "size", 30, "size")
 
 	flag.Parse()
+
+	log.Printf("Getting playlists for %v, creating playlist for %v", options.User, options.Self)
 
 	logFile, err := os.OpenFile("generator.log", os.O_RDWR|os.O_CREATE|os.O_APPEND, 0666)
 	if err != nil {
@@ -312,7 +322,7 @@ func main() {
 		spotifyClient: spotifyClient,
 	}
 
-	pl, err := getPlaylist(spotifyClient, options.User, options.Name)
+	pl, err := getPlaylist(spotifyClient, options.Self, options.Name)
 	if err != nil {
 		log.Fatalf("Error opening file: %v", err)
 	}
@@ -353,18 +363,22 @@ func main() {
 
 	selected := sampling.Sample(options.Size)
 
-	log.Printf("Removing old tracks: %v", len(existing.Ids))
+	if !options.Dry {
+		log.Printf("Removing old tracks: %v", len(existing.Ids))
 
-	err = removeTracksSetFromPlaylist(spotifyClient, options.User, pl.ID, existing)
-	if err != nil {
-		log.Fatalf("%v", err)
-	}
+		err = removeTracksSetFromPlaylist(spotifyClient, options.User, pl.ID, existing)
+		if err != nil {
+			log.Fatalf("%v", err)
+		}
 
-	log.Printf("Adding new tracks: %v", len(selected.Ids))
+		log.Printf("Adding new tracks: %v", len(selected.Ids))
 
-	err = addTracksSetToPlaylist(spotifyClient, options.User, pl.ID, selected)
-	if err != nil {
-		log.Fatalf("%v", err)
+		err = addTracksSetToPlaylist(spotifyClient, options.User, pl.ID, selected)
+		if err != nil {
+			log.Fatalf("%v", err)
+		}
+	} else {
+		log.Printf("Dry run!")
 	}
 }
 

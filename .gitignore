@@ -1,3 +1,4 @@
 secrets.go
 *.json
 *.log
+generator
