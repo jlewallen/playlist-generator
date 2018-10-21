@@ -293,7 +293,7 @@ func main() {
 	var options Options
 
 	flag.StringVar(&options.User, "user", "jlewalle", "user")
-	flag.StringVar(&options.Name, "name", "old monthly", "name")
+	flag.StringVar(&options.Name, "name", "discovery monthly", "name")
 	flag.IntVar(&options.Size, "size", 30, "size")
 
 	flag.Parse()

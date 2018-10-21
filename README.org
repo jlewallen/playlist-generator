@@ -1,0 +1,6 @@
+#+TITLE:  README for playlist-generator
+#+EMAIL:  jlewallen@gmail.commit
+
+
+Simple program that generates a random playlist from tracks in my monthly playlists.
+
