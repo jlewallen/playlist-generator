@@ -15,14 +15,18 @@ type SpotifyTokens struct {
 }
 
 type Tokens struct {
-	Facebook string
-	Spotify  SpotifyTokens
+	Spotify SpotifyTokens
 }
 
 var globalTokens Tokens
 
 func ReadTokens() (tokens *Tokens) {
-	file, e := ioutil.ReadFile("./tokens.json")
+	if _, err := os.Stat("tokens.json"); os.IsNotExist(err) {
+		tokens = &globalTokens
+		return
+	}
+
+	file, e := ioutil.ReadFile("tokens.json")
 	if e != nil {
 		fmt.Printf("File error: %v\n", e)
 		os.Exit(1)
@@ -31,7 +35,6 @@ func ReadTokens() (tokens *Tokens) {
 	json.Unmarshal(file, &globalTokens)
 
 	tokens = &globalTokens
-
 	return
 }
 
@@ -42,7 +45,7 @@ func WriteTokens(tokens *Tokens) {
 
 	}
 
-	err = ioutil.WriteFile("./tokens.json", tokensJson, 0644)
+	err = ioutil.WriteFile("tokens.json", tokensJson, 0644)
 	if err != nil {
 		fmt.Printf("File error: %v\n", err)
 		os.Exit(1)
