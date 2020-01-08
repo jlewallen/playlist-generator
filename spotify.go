@@ -25,7 +25,7 @@ var (
 func AuthenticateSpotify() (spotifyClient *spotify.Client, err error) {
 	var tokens = ReadTokens()
 
-	log.Printf("Authenticating with Spotify...")
+	log.Printf("authenticating with Spotify...")
 
 	if tokens.Spotify.AccessToken == "" {
 		http.HandleFunc("/spotify/callback", CompleteAuth)
@@ -34,7 +34,7 @@ func AuthenticateSpotify() (spotifyClient *spotify.Client, err error) {
 		authenticator.SetAuthInfo(spotifyClientId, spotifyClientSecret)
 
 		url := authenticator.AuthURL(spotifyOauthStateString)
-		log.Println("Please log in to Spotify by visiting the following page in your browser:", url)
+		log.Println("please log in to Spotify by visiting the following page in your browser:", url)
 
 		spotifyClient = <-clientChannel
 	} else {
@@ -53,7 +53,7 @@ func AuthenticateSpotify() (spotifyClient *spotify.Client, err error) {
 		return nil, fmt.Errorf("%v", err)
 	}
 
-	log.Println("spotify: You are logged in as", user.ID)
+	log.Println("spotify: you are logged in as", user.ID)
 
 	return
 }
@@ -61,13 +61,13 @@ func AuthenticateSpotify() (spotifyClient *spotify.Client, err error) {
 func CompleteAuth(w http.ResponseWriter, r *http.Request) {
 	token, err := authenticator.Token(spotifyOauthStateString, r)
 	if err != nil {
-		http.Error(w, "Unable to get token", http.StatusForbidden)
+		http.Error(w, "unable to get token", http.StatusForbidden)
 		log.Fatal(err)
 	}
 
 	if actualState := r.FormValue("state"); actualState != spotifyOauthStateString {
 		http.NotFound(w, r)
-		log.Fatalf("State mismatch: %s != %s\n", actualState, spotifyOauthStateString)
+		log.Fatalf("state mismatch: %s != %s\n", actualState, spotifyOauthStateString)
 	}
 
 	var tokens = ReadTokens()
@@ -88,7 +88,7 @@ func GetPlaylistByTitle(spotifyClient *spotify.Client, user, name string) (*spot
 	for {
 		playlists, err := spotifyClient.GetPlaylistsForUserOpt(user, &options)
 		if err != nil {
-			return nil, fmt.Errorf("Unable to get playlists: %v", err)
+			return nil, fmt.Errorf("unable to get playlists: %v", err)
 		}
 
 		for _, iter := range playlists.Playlists {
@@ -109,23 +109,23 @@ func GetPlaylistByTitle(spotifyClient *spotify.Client, user, name string) (*spot
 }
 
 func GetPlaylist(spotifyClient *spotify.Client, user string, name string) (pl *spotify.SimplePlaylist, err error) {
-	log.Printf("Looking for '%s'...", name)
+	log.Printf("looking for '%s'...", name)
 
 	pl, err = GetPlaylistByTitle(spotifyClient, user, name)
 	if err != nil {
-		return nil, fmt.Errorf("Error getting '%s': %v", name, err)
+		return nil, fmt.Errorf("error getting '%s': %v", name, err)
 	}
 	if pl == nil {
 		created, err := spotifyClient.CreatePlaylistForUser(user, name, "description", true)
 		if err != nil {
-			return nil, fmt.Errorf("Unable to create playlist: %v", err)
+			return nil, fmt.Errorf("unable to create playlist: %v", err)
 		}
 
-		log.Printf("Created playlist: %v", created)
+		log.Printf("created playlist: %v", created)
 
 		pl, err = GetPlaylistByTitle(spotifyClient, user, name)
 		if err != nil {
-			return nil, fmt.Errorf("Error getting %s: %v", name, err)
+			return nil, fmt.Errorf("error getting %s: %v", name, err)
 		}
 	}
 
@@ -182,7 +182,7 @@ func GetArtistAlbums(spotifyClient *spotify.Client, id spotify.ID) ([]spotify.Si
 	for {
 		albums, err := spotifyClient.GetArtistAlbumsOpt(id, &options, nil)
 		if err != nil {
-			return nil, fmt.Errorf("Unable to get albums: %v", err)
+			return nil, fmt.Errorf("unable to get albums: %v", err)
 		}
 
 		all = append(all, albums.Albums...)
@@ -205,7 +205,7 @@ func GetAlbumTracks(spotifyClient *spotify.Client, id spotify.ID) ([]spotify.Sim
 	for {
 		tracks, err := spotifyClient.GetAlbumTracksOpt(id, limit, offset)
 		if err != nil {
-			return nil, fmt.Errorf("Unable to get tracks: %v", err)
+			return nil, fmt.Errorf("unable to get tracks: %v", err)
 		}
 
 		all = append(all, tracks.Tracks...)
@@ -340,7 +340,7 @@ func (ts *TracksSet) ToArray() []spotify.ID {
 
 func (ts *TracksSet) Sample(number int) (ns *TracksSet) {
 	if len(ts.Ids) < number {
-		panic("Not enough tracks to sample from")
+		panic("not enough tracks to sample from")
 	}
 
 	array := ts.ToArray()
@@ -371,7 +371,7 @@ func RemoveTracksFromPlaylist(spotifyClient *spotify.Client, id spotify.ID, ids 
 		batch := ids[i:min(i+50, len(ids))]
 		_, err := spotifyClient.RemoveTracksFromPlaylist(id, batch...)
 		if err != nil {
-			return fmt.Errorf("Error removing tracks: %v", err)
+			return fmt.Errorf("error removing tracks: %v", err)
 		}
 	}
 
@@ -383,7 +383,7 @@ func AddTracksToPlaylist(spotifyClient *spotify.Client, id spotify.ID, ids []spo
 		batch := ids[i:min(i+50, len(ids))]
 		_, err := spotifyClient.AddTracksToPlaylist(id, batch...)
 		if err != nil {
-			return fmt.Errorf("Error adding tracks: %v", err)
+			return fmt.Errorf("error adding tracks: %v", err)
 		}
 	}
 
@@ -405,10 +405,17 @@ func min(a, b int) int {
 	return b
 }
 
+type SpotifyImage struct {
+	Url string
+}
+
 type Playlist struct {
-	ID   spotify.ID
-	User string
-	Name string
+	ID             spotify.ID
+	User           string
+	Name           string
+	NumberOfTracks uint32
+	LastModified   time.Time
+	Width60        SpotifyImage
 }
 
 type Track struct {
@@ -497,12 +504,12 @@ func MapIds(ids []spotify.ID) (ifaces []interface{}) {
 func SetPlaylistTracks(spotifyClient *spotify.Client, id spotify.ID, tracks []spotify.ID) error {
 	err := RemoveAllPlaylistTracks(spotifyClient, id)
 	if err != nil {
-		return fmt.Errorf("Error getting removing tracks: %v", err)
+		return fmt.Errorf("error getting removing tracks: %v", err)
 	}
 
 	err = AddTracksToPlaylist(spotifyClient, id, tracks)
 	if err != nil {
-		return fmt.Errorf("Error adding tracks: %v", err)
+		return fmt.Errorf("error adding tracks: %v", err)
 	}
 
 	return err
