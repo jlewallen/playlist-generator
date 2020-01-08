@@ -4,8 +4,11 @@ import (
 	"bytes"
 	"flag"
 	"io"
+	"io/ioutil"
 	"log"
 	"os"
+
+	"encoding/json"
 )
 
 type Options struct {
@@ -63,6 +66,40 @@ func main() {
 	}
 
 	allTracks := NewEmptyTracksSet()
+
+	if true {
+		summaries := PlaylistSummaries{
+			Playlists: make([]*PlaylistSummary, 0),
+		}
+
+		for _, pl := range playlists.Playlists {
+			tracks, err := cacher.GetPlaylistTracks(options.User, pl.ID)
+			if err != nil {
+				log.Fatalf("%v", err)
+			}
+
+			summary, err := Summarize(pl, tracks)
+			if err != nil {
+				log.Fatalf("%v", err)
+			}
+
+			log.Printf("playlist: %v (%d tracks) %v", pl.Name, len(tracks), summary.LastModified)
+
+			summaries.Playlists = append(summaries.Playlists, summary)
+		}
+
+		json, err := json.Marshal(summaries)
+		if err != nil {
+			log.Fatalf("%v", err)
+			// return nil, fmt.Errorf("error saving playlists: %v", err)
+		}
+
+		err = ioutil.WriteFile("playlists.json", json, 0644)
+		if err != nil {
+			log.Fatalf("%v", err)
+			// return nil, fmt.Errorf("error saving playlists: %v", err)
+		}
+	}
 
 	for _, pl := range playlists.Monthly().Playlists {
 		tracks, err := cacher.GetPlaylistTracks(options.User, pl.ID)

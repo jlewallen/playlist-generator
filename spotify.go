@@ -406,16 +406,17 @@ func min(a, b int) int {
 }
 
 type SpotifyImage struct {
-	Url string
+	URL string `json:"url"`
+	Dx  int32  `json:"dx"`
+	Dy  int32  `json:"dy"`
 }
 
 type Playlist struct {
-	ID             spotify.ID
-	User           string
-	Name           string
-	NumberOfTracks uint32
-	LastModified   time.Time
-	Width60        SpotifyImage
+	ID     spotify.ID
+	User   string
+	Owner  string
+	Name   string
+	Images []SpotifyImage
 }
 
 type Track struct {

@@ -5,7 +5,7 @@ import (
 	"io/ioutil"
 	"log"
 	"os"
-	"time"
+	_ "time"
 
 	"encoding/json"
 
@@ -52,13 +52,20 @@ func (sc *SpotifyCacher) GetPlaylists(user string) (playlists *PlaylistSet, err 
 		}
 
 		for _, iter := range page.Playlists {
+			images := make([]SpotifyImage, 0)
+			for _, image := range iter.Images {
+				images = append(images, SpotifyImage{
+					URL: image.URL,
+					Dx:  int32(image.Width),
+					Dy:  int32(image.Height),
+				})
+			}
 			playlists.Playlists = append(playlists.Playlists, Playlist{
-				ID:             iter.ID,
-				Name:           iter.Name,
-				User:           user,
-				NumberOfTracks: 0,
-				LastModified:   time.Time{},
-				Width60:        SpotifyImage{},
+				ID:     iter.ID,
+				Name:   iter.Name,
+				User:   user,
+				Owner:  iter.Owner.DisplayName,
+				Images: images,
 			})
 		}
 
