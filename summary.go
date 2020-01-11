@@ -9,13 +9,19 @@ import (
 
 type PlaylistSummary struct {
 	ID             spotify.ID     `json:"id"`
-	User           string         `json:"user"`
 	Name           string         `json:"name"`
-	Owner          string         `json:"owner"`
+	User           PlaylistUser   `json:"user"`
+	Owner          PlaylistUser   `json:"owner"`
 	Images         []SpotifyImage `json:"images"`
 	Description    string         `json:"description"`
 	NumberOfTracks uint32         `json:"numberOfTracks"`
 	LastModified   time.Time      `json:"lastModified"`
+	Subscribed     bool           `json:"subscribed"`
+	SnapshotID     string         `json:"snapshot"`
+}
+
+type PlaylistUser struct {
+	ID string `json:"id"`
 }
 
 type PlaylistSummaries struct {
@@ -26,10 +32,16 @@ func Summarize(pl Playlist, tracks []spotify.PlaylistTrack) (ps *PlaylistSummary
 	ps = &PlaylistSummary{
 		ID:             pl.ID,
 		Name:           pl.Name,
-		User:           pl.User,
-		Owner:          pl.Owner,
+		Subscribed:     pl.Owner != pl.User,
 		Images:         pl.Images,
+		SnapshotID:     pl.SnapshotID,
 		NumberOfTracks: uint32(len(tracks)),
+		User: PlaylistUser{
+			ID: pl.User,
+		},
+		Owner: PlaylistUser{
+			ID: pl.Owner,
+		},
 	}
 
 	for _, track := range tracks {

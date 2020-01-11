@@ -412,11 +412,12 @@ type SpotifyImage struct {
 }
 
 type Playlist struct {
-	ID     spotify.ID
-	User   string
-	Owner  string
-	Name   string
-	Images []SpotifyImage
+	ID         spotify.ID
+	User       string
+	Owner      string
+	Name       string
+	Images     []SpotifyImage
+	SnapshotID string
 }
 
 type Track struct {

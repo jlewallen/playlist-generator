@@ -16,27 +16,30 @@ const VerboseLogging = false
 
 type SpotifyCacher struct {
 	spotifyClient *spotify.Client
+	refresh       bool
 }
 
 func (sc *SpotifyCacher) GetPlaylists(user string) (playlists *PlaylistSet, err error) {
 	cachedFile := fmt.Sprintf("playlists-%s.json", user)
-	if _, err := os.Stat(cachedFile); !os.IsNotExist(err) {
-		file, err := ioutil.ReadFile(cachedFile)
-		if err != nil {
-			return nil, err
-		}
+	if !sc.refresh {
+		if _, err := os.Stat(cachedFile); !os.IsNotExist(err) {
+			file, err := ioutil.ReadFile(cachedFile)
+			if err != nil {
+				return nil, err
+			}
 
-		playlists = &PlaylistSet{}
-		err = json.Unmarshal(file, playlists)
-		if err != nil {
-			return nil, err
-		}
+			playlists = &PlaylistSet{}
+			err = json.Unmarshal(file, playlists)
+			if err != nil {
+				return nil, err
+			}
 
-		if VerboseLogging {
-			log.Printf("returning cached %v", cachedFile)
-		}
+			if VerboseLogging {
+				log.Printf("returning cached %v", cachedFile)
+			}
 
-		return playlists, nil
+			return playlists, nil
+		}
 	}
 
 	limit := 50
@@ -61,11 +64,12 @@ func (sc *SpotifyCacher) GetPlaylists(user string) (playlists *PlaylistSet, err 
 				})
 			}
 			playlists.Playlists = append(playlists.Playlists, Playlist{
-				ID:     iter.ID,
-				Name:   iter.Name,
-				User:   user,
-				Owner:  iter.Owner.DisplayName,
-				Images: images,
+				ID:         iter.ID,
+				Name:       iter.Name,
+				User:       user,
+				Owner:      iter.Owner.ID,
+				Images:     images,
+				SnapshotID: iter.SnapshotID,
 			})
 		}
 
@@ -99,23 +103,25 @@ func (sc *SpotifyCacher) Invalidate(id spotify.ID) {
 
 func (sc *SpotifyCacher) GetPlaylistTracks(userId string, id spotify.ID) (allTracks []spotify.PlaylistTrack, err error) {
 	cachedFile := fmt.Sprintf("playlist-%s.json", id)
-	if _, err := os.Stat(cachedFile); !os.IsNotExist(err) {
-		file, err := ioutil.ReadFile(cachedFile)
-		if err != nil {
-			return nil, fmt.Errorf("error opening %v", err)
-		}
+	if !sc.refresh {
+		if _, err := os.Stat(cachedFile); !os.IsNotExist(err) {
+			file, err := ioutil.ReadFile(cachedFile)
+			if err != nil {
+				return nil, fmt.Errorf("error opening %v", err)
+			}
 
-		allTracks = make([]spotify.PlaylistTrack, 0)
-		err = json.Unmarshal(file, &allTracks)
-		if err != nil {
-			return nil, fmt.Errorf("error unmarshalling %v", err)
-		}
+			allTracks = make([]spotify.PlaylistTrack, 0)
+			err = json.Unmarshal(file, &allTracks)
+			if err != nil {
+				return nil, fmt.Errorf("error unmarshalling %v", err)
+			}
 
-		if VerboseLogging {
-			log.Printf("returning cached %s", cachedFile)
-		}
+			if VerboseLogging {
+				log.Printf("returning cached %s", cachedFile)
+			}
 
-		return allTracks, nil
+			return allTracks, nil
+		}
 	}
 
 	allTracks, spotifyErr := GetPlaylistTracks(sc.spotifyClient, id)
