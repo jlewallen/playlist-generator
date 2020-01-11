@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"io/ioutil"
 	"log"
+	"path/filepath"
 	"strings"
 	"time"
 
@@ -40,13 +41,13 @@ func NewPlaylists(rootPath string) (pl *Playlists) {
 }
 
 func (pl *Playlists) Load() error {
-	summaries, err := LoadSummaries("playlists.json")
+	summaries, err := LoadSummaries(filepath.Join(pl.RootPath, "playlists.json"))
 	if err != nil {
 		return err
 	}
 
 	for _, playlist := range summaries.Playlists {
-		path := fmt.Sprintf("playlist-%s.json", playlist.ID)
+		path := filepath.Join(pl.RootPath, fmt.Sprintf("playlist-%s.json", playlist.ID))
 
 		bytes, err := ioutil.ReadFile(path)
 		if err != nil {
@@ -176,7 +177,7 @@ func main() {
 
 	pl := NewPlaylists(o.RootPath)
 
-	http.HandleFunc("/search", func(w http.ResponseWriter, req *http.Request) {
+	http.HandleFunc("/", func(w http.ResponseWriter, req *http.Request) {
 		log.Printf("[http] %v", req.URL)
 
 		q, ok := req.URL.Query()["q"]
