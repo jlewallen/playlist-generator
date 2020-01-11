@@ -405,21 +405,6 @@ func min(a, b int) int {
 	return b
 }
 
-type SpotifyImage struct {
-	URL string `json:"url"`
-	Dx  int32  `json:"dx"`
-	Dy  int32  `json:"dy"`
-}
-
-type Playlist struct {
-	ID         spotify.ID
-	User       string
-	Owner      string
-	Name       string
-	Images     []SpotifyImage
-	SnapshotID string
-}
-
 type Track struct {
 	ID    spotify.ID
 	Title string

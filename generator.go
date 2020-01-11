@@ -23,16 +23,11 @@ type Options struct {
 
 func readPlaylistSummaries(file string) (summaries *PlaylistSummaries, err error) {
 	if _, err := os.Stat(file); !os.IsNotExist(err) {
-		file, err := ioutil.ReadFile(file)
+		summaries, err = LoadSummaries(file)
 		if err != nil {
 			return nil, err
 		}
 
-		summaries = &PlaylistSummaries{}
-		err = json.Unmarshal(file, summaries)
-		if err != nil {
-			return nil, err
-		}
 		return summaries, nil
 	}
 

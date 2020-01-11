@@ -1,7 +1,13 @@
-build: generator
+build: generator api
 
 secrets.go: secrets.go.template
 	cp secrets.go.template secrets.go
 
-generator: *.go secrets.go
-	go build -o generator *.go
+generator: generator.go caching.go spotify.go summary.go tokens.go secrets.go
+	go build -o generator $^
+
+api: api.go
+	go build -o api api.go summary.go
+
+clean:
+	rm -f generator api
