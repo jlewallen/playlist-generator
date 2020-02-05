@@ -94,6 +94,13 @@ func (sc *SpotifyCacher) GetPlaylists(user string) (playlists *PlaylistSet, err 
 	return
 }
 
+func (sc *SpotifyCacher) InvalidateUser(user string) {
+	cachedFile := fmt.Sprintf("playlists-%s.json", user)
+	os.Remove(cachedFile)
+
+	log.Printf("invalidating playlists %v", user)
+}
+
 func (sc *SpotifyCacher) Invalidate(id spotify.ID) {
 	cachedFile := fmt.Sprintf("playlist-%s.json", id)
 	os.Remove(cachedFile)

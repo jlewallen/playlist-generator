@@ -127,6 +127,8 @@ func main() {
 
 	log.Printf("have %v (%v tracks)", pl, len(existingTracks))
 
+	cacher.InvalidateUser(options.User)
+
 	playlists, err := cacher.GetPlaylists(options.User)
 	if err != nil {
 		log.Fatalf("%v", err)
