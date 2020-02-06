@@ -34,7 +34,7 @@ func readPlaylistSummaries(file string) (summaries *PlaylistSummaries, err error
 	return nil, nil
 }
 
-func generateSummary(cacher *SpotifyCacher, user string, playlists *PlaylistSet) error {
+func generateSummary(cacher *SpotifyCacher, user string, playlists *PlaylistSet, dry bool) error {
 	old, err := readPlaylistSummaries("playlists.json")
 	if err != nil {
 		return err
@@ -48,9 +48,13 @@ func generateSummary(cacher *SpotifyCacher, user string, playlists *PlaylistSet)
 		if old != nil {
 			for _, oldSummary := range old.Playlists {
 				if oldSummary.ID == pl.ID {
-					if oldSummary.ID != pl.ID {
-						log.Printf("invalidating! (%v != %v)", oldSummary.SnapshotID, pl.SnapshotID)
-						cacher.Invalidate(pl.ID)
+					if oldSummary.SnapshotID != pl.SnapshotID {
+						if !dry {
+							cacher.Invalidate(pl.ID)
+							break
+						}
+					} else {
+						break
 					}
 				}
 			}
@@ -136,7 +140,7 @@ func main() {
 
 	allTracks := NewEmptyTracksSet()
 
-	err = generateSummary(cacher, options.User, playlists)
+	err = generateSummary(cacher, options.User, playlists, options.Dry)
 	if err != nil {
 		log.Fatalf("%v", err)
 	}
