@@ -95,7 +95,7 @@ func main() {
 	flag.BoolVar(&options.Refresh, "refresh", false, "refresh")
 	flag.StringVar(&options.Self, "self", "jlewalle", "self")
 	flag.StringVar(&options.User, "user", "jlewalle", "user")
-	flag.StringVar(&options.Name, "name", "discovery monthly", "name")
+	flag.StringVar(&options.Name, "name", "rediscover weekly", "name")
 	flag.IntVar(&options.Size, "size", 30, "size")
 
 	flag.Parse()
