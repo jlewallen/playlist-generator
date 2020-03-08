@@ -180,6 +180,8 @@ func main() {
 	http.HandleFunc("/", func(w http.ResponseWriter, req *http.Request) {
 		log.Printf("[http] %v", req.URL)
 
+		w.Header().Set("Access-Control-Allow-Origin", "*")
+
 		q, ok := req.URL.Query()["q"]
 		if !ok || len(q) != 1 {
 			w.WriteHeader(http.StatusBadRequest)
