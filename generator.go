@@ -14,6 +14,7 @@ import (
 
 type Options struct {
 	Dry     bool
+	Serve   bool
 	Refresh bool
 	Self    string
 	User    string
@@ -88,23 +89,12 @@ func generateSummary(cacher *SpotifyCacher, user string, playlists *PlaylistSet,
 	return nil
 }
 
-func main() {
-	var options Options
-
-	flag.BoolVar(&options.Dry, "dry", false, "dry")
-	flag.BoolVar(&options.Refresh, "refresh", false, "refresh")
-	flag.StringVar(&options.Self, "self", "jlewalle", "self")
-	flag.StringVar(&options.User, "user", "jlewalle", "user")
-	flag.StringVar(&options.Name, "name", "rediscover weekly", "name")
-	flag.IntVar(&options.Size, "size", 30, "size")
-
-	flag.Parse()
-
+func refreshSpotify(options *Options) error {
 	log.Printf("getting playlists for %v, creating playlist for %v", options.User, options.Self)
 
 	logFile, err := os.OpenFile("generator.log", os.O_RDWR|os.O_CREATE|os.O_APPEND, 0666)
 	if err != nil {
-		log.Fatalf("error opening file: %v", err)
+		return fmt.Errorf("error opening file: %v", err)
 	}
 	defer logFile.Close()
 	buffer := new(bytes.Buffer)
@@ -119,14 +109,14 @@ func main() {
 
 	pl, err := GetPlaylist(spotifyClient, options.Self, options.Name)
 	if err != nil {
-		log.Fatalf("error opening file: %v", err)
+		return fmt.Errorf("error opening file: %v", err)
 	}
 
 	cacher.Invalidate(pl.ID)
 
 	existingTracks, err := cacher.GetPlaylistTracks(options.User, pl.ID)
 	if err != nil {
-		log.Fatalf("%v", err)
+		return fmt.Errorf("%v", err)
 	}
 
 	log.Printf("have %v (%v tracks)", pl, len(existingTracks))
@@ -135,20 +125,20 @@ func main() {
 
 	playlists, err := cacher.GetPlaylists(options.User)
 	if err != nil {
-		log.Fatalf("%v", err)
+		return fmt.Errorf("%v", err)
 	}
 
 	allTracks := NewEmptyTracksSet()
 
 	err = generateSummary(cacher, options.User, playlists, options.Dry)
 	if err != nil {
-		log.Fatalf("%v", err)
+		return fmt.Errorf("%v", err)
 	}
 
 	for _, pl := range playlists.Monthly().Playlists {
 		tracks, err := cacher.GetPlaylistTracks(options.User, pl.ID)
 		if err != nil {
-			log.Fatalf("%v", err)
+			return fmt.Errorf("%v", err)
 		}
 
 		log.Printf("monthly: %v (%d tracks)", pl.Name, len(tracks))
@@ -170,16 +160,45 @@ func main() {
 
 		err = RemoveTracksSetFromPlaylist(spotifyClient, pl.ID, existing)
 		if err != nil {
-			log.Fatalf("%v", err)
+			return fmt.Errorf("%v", err)
 		}
 
 		log.Printf("adding new tracks: %v", len(selected.Ids))
 
 		err = AddTracksSetToPlaylist(spotifyClient, pl.ID, selected)
 		if err != nil {
-			log.Fatalf("%v", err)
+			return fmt.Errorf("%v", err)
 		}
 	} else {
 		log.Printf("dry run!")
 	}
+
+	return nil
+}
+
+func main() {
+	options := &Options{}
+
+	flag.BoolVar(&options.Dry, "dry", false, "dry")
+	flag.BoolVar(&options.Serve, "serve", false, "serve")
+	flag.BoolVar(&options.Refresh, "refresh", false, "refresh")
+	flag.StringVar(&options.Self, "self", "jlewalle", "self")
+	flag.StringVar(&options.User, "user", "jlewalle", "user")
+	flag.StringVar(&options.Name, "name", "rediscover weekly", "name")
+	flag.IntVar(&options.Size, "size", 30, "size")
+
+	flag.Parse()
+
+	if options.Serve {
+		err := Serve(options)
+		if err != nil {
+			log.Fatalf("%v", err)
+		}
+	} else {
+		err := refreshSpotify(options)
+		if err != nil {
+			log.Fatalf("%v", err)
+		}
+	}
+
 }
