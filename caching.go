@@ -15,30 +15,58 @@ import (
 const VerboseLogging = false
 
 type SpotifyCacher struct {
+	cache         map[string]interface{}
 	spotifyClient *spotify.Client
 	refresh       bool
+}
+
+func NewSpotifyCacher(spotifyClient *spotify.Client, refresh bool) *SpotifyCacher {
+	return &SpotifyCacher{
+		cache:         make(map[string]interface{}),
+		spotifyClient: spotifyClient,
+		refresh:       refresh,
+	}
+}
+
+func (sc *SpotifyCacher) lookup(path string, value interface{}) (interface{}, error) {
+	if sc.cache[path] != nil {
+		value = sc.cache[path]
+		return value, nil
+	}
+
+	if _, err := os.Stat(path); !os.IsNotExist(err) {
+		file, err := ioutil.ReadFile(path)
+		if err != nil {
+			return nil, fmt.Errorf("error reading: %v", err)
+		}
+
+		err = json.Unmarshal(file, value)
+		if err != nil {
+			return nil, fmt.Errorf("error unmarshalling: %v", err)
+		}
+
+		if VerboseLogging {
+			log.Printf("returning cached %v %v", path)
+		}
+
+		sc.cache[path] = value
+
+		return value, nil
+	}
+
+	return nil, nil
 }
 
 func (sc *SpotifyCacher) GetPlaylists(user string) (playlists *PlaylistSet, err error) {
 	cachedFile := fmt.Sprintf(".cache/playlists-%s.json", user)
 	if !sc.refresh {
-		if _, err := os.Stat(cachedFile); !os.IsNotExist(err) {
-			file, err := ioutil.ReadFile(cachedFile)
-			if err != nil {
-				return nil, err
-			}
-
-			playlists = &PlaylistSet{}
-			err = json.Unmarshal(file, playlists)
-			if err != nil {
-				return nil, err
-			}
-
-			if VerboseLogging {
-				log.Printf("returning cached %v", cachedFile)
-			}
-
-			return playlists, nil
+		playlists = &PlaylistSet{}
+		cached, err := sc.lookup(cachedFile, playlists)
+		if err != nil {
+			return nil, err
+		}
+		if cached != nil {
+			return cached.(*PlaylistSet), nil
 		}
 	}
 
@@ -111,23 +139,13 @@ func (sc *SpotifyCacher) Invalidate(id spotify.ID) {
 func (sc *SpotifyCacher) GetPlaylistTracks(userId string, id spotify.ID) (allTracks []spotify.PlaylistTrack, err error) {
 	cachedFile := fmt.Sprintf(".cache/playlist-%s.json", id)
 	if !sc.refresh {
-		if _, err := os.Stat(cachedFile); !os.IsNotExist(err) {
-			file, err := ioutil.ReadFile(cachedFile)
-			if err != nil {
-				return nil, fmt.Errorf("error opening %v", err)
-			}
-
-			allTracks = make([]spotify.PlaylistTrack, 0)
-			err = json.Unmarshal(file, &allTracks)
-			if err != nil {
-				return nil, fmt.Errorf("error unmarshalling %v", err)
-			}
-
-			if VerboseLogging {
-				log.Printf("returning cached %s", cachedFile)
-			}
-
-			return allTracks, nil
+		allTracks = make([]spotify.PlaylistTrack, 0)
+		cached, err := sc.lookup(cachedFile, &allTracks)
+		if err != nil {
+			return nil, err
+		}
+		if cached != nil {
+			return *(cached.(*[]spotify.PlaylistTrack)), nil
 		}
 	}
 
@@ -153,22 +171,14 @@ func (sc *SpotifyCacher) GetPlaylistTracks(userId string, id spotify.ID) (allTra
 func (sc *SpotifyCacher) GetAlbum(id spotify.ID) (album *spotify.FullAlbum, err error) {
 	cachedFile := fmt.Sprintf(".cache/album-%s.json", id)
 	if _, err := os.Stat(cachedFile); !os.IsNotExist(err) {
-		file, err := ioutil.ReadFile(cachedFile)
-		if err != nil {
-			return nil, fmt.Errorf("error opening %v", err)
-		}
-
 		var album *spotify.FullAlbum
-		err = json.Unmarshal(file, &album)
+		cached, err := sc.lookup(cachedFile, album)
 		if err != nil {
-			return nil, fmt.Errorf("error unmarshalling %v", err)
+			return nil, err
 		}
-
-		if VerboseLogging {
-			log.Printf("returning cached %s", cachedFile)
+		if cached != nil {
+			return cached.(*spotify.FullAlbum), nil
 		}
-
-		return album, nil
 	}
 
 	album, spotifyErr := sc.spotifyClient.GetAlbum(id)
@@ -193,22 +203,14 @@ func (sc *SpotifyCacher) GetAlbum(id spotify.ID) (album *spotify.FullAlbum, err 
 func (sc *SpotifyCacher) GetAlbumTracks(id spotify.ID) (allTracks []spotify.SimpleTrack, err error) {
 	cachedFile := fmt.Sprintf(".cache/album-tracks-%s.json", id)
 	if _, err := os.Stat(cachedFile); !os.IsNotExist(err) {
-		file, err := ioutil.ReadFile(cachedFile)
-		if err != nil {
-			return nil, fmt.Errorf("error opening %v", err)
-		}
-
 		allTracks := make([]spotify.SimpleTrack, 0)
-		err = json.Unmarshal(file, &allTracks)
+		cached, err := sc.lookup(cachedFile, &allTracks)
 		if err != nil {
-			return nil, fmt.Errorf("error unmarshalling %v", err)
+			return nil, err
 		}
-
-		if VerboseLogging {
-			log.Printf("returning cached %s", cachedFile)
+		if cached != nil {
+			return *(cached.(*[]spotify.SimpleTrack)), nil
 		}
-
-		return allTracks, nil
 	}
 
 	allTracks, spotifyErr := GetAlbumTracks(sc.spotifyClient, id)
@@ -233,22 +235,14 @@ func (sc *SpotifyCacher) GetAlbumTracks(id spotify.ID) (allTracks []spotify.Simp
 func (sc *SpotifyCacher) GetArtistAlbums(id spotify.ID) (allAlbums []spotify.SimpleAlbum, err error) {
 	cachedFile := fmt.Sprintf(".cache/artist-albums-%s.json", id)
 	if _, err := os.Stat(cachedFile); !os.IsNotExist(err) {
-		file, err := ioutil.ReadFile(cachedFile)
-		if err != nil {
-			return nil, fmt.Errorf("error opening %v", err)
-		}
-
 		allAlbums := make([]spotify.SimpleAlbum, 0)
-		err = json.Unmarshal(file, &allAlbums)
+		cached, err := sc.lookup(cachedFile, &allAlbums)
 		if err != nil {
-			return nil, fmt.Errorf("error unmarshalling %v", err)
+			return nil, err
 		}
-
-		if VerboseLogging {
-			log.Printf("returning cached %s", cachedFile)
+		if cached != nil {
+			return *(cached.(*[]spotify.SimpleAlbum)), nil
 		}
-
-		return allAlbums, nil
 	}
 
 	allAlbums, spotifyErr := GetArtistAlbums(sc.spotifyClient, id)

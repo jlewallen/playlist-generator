@@ -102,10 +102,7 @@ func refreshSpotify(options *Options) error {
 	log.SetOutput(multi)
 
 	spotifyClient, _ := AuthenticateSpotify()
-	cacher := &SpotifyCacher{
-		spotifyClient: spotifyClient,
-		refresh:       options.Refresh,
-	}
+	cacher := NewSpotifyCacher(spotifyClient, options.Refresh)
 
 	pl, err := GetPlaylist(spotifyClient, options.Self, options.Name)
 	if err != nil {

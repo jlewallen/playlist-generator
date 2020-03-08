@@ -151,7 +151,7 @@ func searchPlaylists(ctx context.Context, s *Services, w http.ResponseWriter, r 
 	w.WriteHeader(http.StatusOK)
 	w.Write(data)
 
-	log.Printf("done %vms q = '%s'", elapsed, q)
+	log.Printf("done %v q = '%s'", elapsed, q)
 
 	return err
 }
@@ -169,9 +169,7 @@ func middleware(services *Services, h func(context.Context, *Services, http.Resp
 
 func Serve(options *Options) error {
 	spotifyClient, _ := AuthenticateSpotify()
-	cacher := &SpotifyCacher{
-		spotifyClient: spotifyClient,
-	}
+	cacher := NewSpotifyCacher(spotifyClient, false)
 
 	services := &Services{
 		spotify: cacher,
