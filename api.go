@@ -41,13 +41,13 @@ func NewPlaylists(rootPath string) (pl *Playlists) {
 }
 
 func (pl *Playlists) Load() error {
-	summaries, err := LoadSummaries(filepath.Join(pl.RootPath, "playlists.json"))
+	summaries, err := LoadSummaries(filepath.Join(pl.RootPath, ".cache/playlists.json"))
 	if err != nil {
 		return err
 	}
 
 	for _, playlist := range summaries.Playlists {
-		path := filepath.Join(pl.RootPath, fmt.Sprintf("playlist-%s.json", playlist.ID))
+		path := filepath.Join(pl.RootPath, fmt.Sprintf(".cache/playlist-%s.json", playlist.ID))
 
 		bytes, err := ioutil.ReadFile(path)
 		if err != nil {
