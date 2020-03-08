@@ -35,7 +35,7 @@ func readPlaylistSummaries(file string) (summaries *PlaylistSummaries, err error
 }
 
 func generateSummary(cacher *SpotifyCacher, user string, playlists *PlaylistSet, dry bool) error {
-	old, err := readPlaylistSummaries("playlists.json")
+	old, err := readPlaylistSummaries(".cache/playlists.json")
 	if err != nil {
 		return err
 	}
