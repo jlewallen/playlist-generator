@@ -353,9 +353,13 @@ func (ts *TracksSet) Sample(number int) (ns *TracksSet) {
 			i := rand.Uint32() % uint32(len(array))
 			id := array[i]
 
-			if _, ok := ids[id]; !ok {
-				ids[id] = true
-				ordered = append(ordered, id)
+			if len(id) == 0 {
+				log.Printf("skip empty id (%d / %d)", i, len(array))
+			} else {
+				if _, ok := ids[id]; !ok {
+					ids[id] = true
+					ordered = append(ordered, id)
+				}
 			}
 		}
 	}
@@ -373,18 +377,25 @@ func RemoveTracksFromPlaylist(spotifyClient *spotify.Client, id spotify.ID, ids 
 		if err != nil {
 			return fmt.Errorf("error removing tracks: %v", err)
 		}
+		log.Printf("removed %v in batch from %s", len(batch), id)
 	}
 
 	return nil
 }
 
 func AddTracksToPlaylist(spotifyClient *spotify.Client, id spotify.ID, ids []spotify.ID) (err error) {
+	if true {
+		for _, id := range ids {
+			log.Printf("adding: %s", id)
+		}
+	}
 	for i := 0; i < len(ids); i += 50 {
 		batch := ids[i:min(i+50, len(ids))]
 		_, err := spotifyClient.AddTracksToPlaylist(id, batch...)
 		if err != nil {
 			return fmt.Errorf("error adding tracks: %v", err)
 		}
+		log.Printf("added %v in batch to %s", len(batch), id)
 	}
 
 	return nil
